@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NAURU • Gemelo Digital 3D - Laboratorio de Informática</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Three.js y OrbitControls para la escena 3D estilo Blender -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* 60% Dominante */
+      --bg-60: #090d16;
+      --bg-60-alt: #060911;
+
+      /* 30% Secundario */
+      --bg-30: #131c2e;
+      --bg-30-elevated: #1b263b;
+      --border-30: #26354f;
+
+      /* 10% Acento */
+      --accent-10: #06b6d4;
+      --accent-10-light: #38bdf8;
+      --accent-10-glow: rgba(6, 182, 212, 0.22);
+
+      /* Estados semánticos y tipografía */
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { 
+      scroll-behavior: smooth;
+      scroll-padding-top: 90px; 
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-60);
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(29, 59, 111, 0.25) 0%, transparent 45%),
+        radial-gradient(circle at 85% 40%, rgba(255, 125, 84, 0.08) 0%, transparent 50%);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ================= NAVBAR / HEADER ================= */
+    header {
+      background-color: rgba(22, 44, 82, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-30);
+      padding: 12px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+
+    .nauru-emblem {
+      width: 44px;
+      height: 30px;
+      filter: drop-shadow(0 0 8px rgba(255, 125, 84, 0.45));
+      transition: transform 0.3s ease;
+    }
+
+    .brand-link:hover .nauru-emblem {
+      transform: scale(1.06);
+    }
+
+    .brand-wordmark {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: var(--text-main);
+      background: linear-gradient(90deg, #ffffff 30%, var(--accent-10-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    nav ul {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+
+    nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 6px 2px;
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0%;
+      height: 2px;
+      background: var(--accent-10);
+      transition: width 0.25s ease;
+    }
+
+    nav a:hover { color: var(--text-main); }
+    nav a:hover::after { width: 100%; }
+
+    /* ================= SECCIÓN HERO & ACRÓNIMO NAURU ================= */
+    .hero-section {
+      max-width: 1150px;
+      margin: 48px auto 28px auto;
+      padding: 0 24px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-30);
+      border: 1px solid var(--border-30);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent-10-light);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .hero-section h1 {
+      font-size: 2.5rem;
+      margin-bottom: 14px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+
+    .hero-section h1 span { color: var(--accent-10-light); }
+
+    .hero-desc {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 780px;
+      margin: 0 auto 28px auto;
+      line-height: 1.65;
+    }
+
+    .acronym-strip {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      max-width: 920px;
+      margin: 0 auto;
+      background: var(--bg-30);
+      border: 1px solid var(--border-30);
+      border-radius: 14px;
+      padding: 14px 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .acronym-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-60);
+      border: 1px solid var(--border-30);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .acronym-item:hover {
+      border-color: var(--accent-10);
+      transform: translateY(-2px);
+    }
+
+    .acronym-letter {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--accent-10-light);
+    }
+
+    .acronym-word { color: var(--text-main); font-weight: 500; }
+
+    /* ================= CONTENEDOR PRINCIPAL DEL PROYECTO (LABORATORIO 3D) ================= */
+    .main-project-container {
+      max-width: 1400px;
+      width: 95%;
+      margin: 24px auto;
+      background: var(--bg-30);
+      border: 1px solid var(--border-30);
+      border-radius: 18px;
+      display: flex;
+      height: 680px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+
+    .workspace {
+      flex: 1.9;
+      display: flex;
+      flex-direction: column;
+      padding: 22px;
+      position: relative;
+    }
+
+    .lab-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--ok);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      background-color: var(--ok);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .filtros { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+
+    .btn-filtro {
+      background: var(--bg-60);
+      color: var(--text-muted);
+      border: 1px solid var(--border-30);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-filtro:hover { border-color: var(--accent-10); color: var(--text-main); }
+
+    .btn-filtro.activo {
+      background: var(--accent-10);
+      color: var(--bg-60);
+      font-weight: 700;
+      border-color: var(--accent-10);
+      box-shadow: 0 0 12px var(--accent-10-glow);
+    }
+
+    .btn-camara {
+      margin-left: auto;
+      background: var(--bg-30-elevated);
+      color: var(--accent-10-light);
+      border: 1px solid var(--border-30);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-camara:hover {
+      background: var(--accent-10);
+      color: var(--bg-60);
+    }
+
+    .mapa-wrapper {
+      flex: 1;
+      background: radial-gradient(circle at 50% 40%, #1c2536 0%, #0d111a 100%);
+      border: 1px solid var(--border-30);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+    }
+
+    .mapa-wrapper:active { cursor: grabbing; }
+
+    #canvas-3d-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Etiqueta flotante estilo Blender Viewport */
+    .blender-hud {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      pointer-events: none;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: rgba(248, 250, 252, 0.75);
+      background: rgba(9, 13, 22, 0.65);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      line-height: 1.4;
+    }
+
+    .tooltip-3d {
+      position: absolute;
+      background: rgba(19, 28, 46, 0.95);
+      border: 1px solid var(--accent-10);
+      color: var(--text-main);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      pointer-events: none;
+      display: none;
+      z-index: 50;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    /* PANEL DERECHO DE TELEMETRÍA */
+    .sidebar {
+      flex: 1;
+      min-width: 350px;
+      max-width: 400px;
+      background-color: var(--bg-60);
+      border-left: 1px solid var(--border-30);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .header-equipo {
+      border-bottom: 1px solid var(--border-30);
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+    }
+
+    .tag-tipo { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-10-light); font-weight: 700; }
+    .titulo-equipo { font-size: 1.25rem; margin: 4px 0 6px 0; }
+    .estado-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+
+    .grid-metricas {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .card-metrica {
+      background: var(--bg-30);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-30);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .card-metrica:hover, .card-metrica.activa {
+      border-color: var(--accent-10);
+      background: rgba(255, 125, 84, 0.1);
+    }
+
+    .metrica-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+    .metrica-valor { font-size: 1.15rem; font-weight: 700; color: var(--text-main); }
+
+    .chart-box {
+      background: var(--bg-30);
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-30);
+      margin-top: auto;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ================= SECCIÓN INTEGRANTES POR ÁREA ================= */
+    .section-container {
+      max-width: 1250px;
+      margin: 64px auto;
+      padding: 0 24px;
+    }
+
+    .section-header { text-align: center; margin-bottom: 36px; }
+    .section-title { font-size: 1.9rem; font-weight: 800; margin-bottom: 10px; }
+    .section-subtitle { color: var(--text-muted); font-size: 0.98rem; max-width: 650px; margin: 0 auto; }
+
+    .areas-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 980px) {
+      .areas-grid { grid-template-columns: 1fr; }
+      .main-project-container { flex-direction: column; height: auto; }
+      .mapa-wrapper { min-height: 450px; }
+      .sidebar { max-width: 100%; border-left: none; border-top: 1px solid var(--border-30); }
+    }
+
+    .area-card {
+      background: var(--bg-30);
+      border: 1px solid var(--border-30);
+      border-radius: 16px;
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .area-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent-10), var(--accent-10-light));
+      opacity: 0.8;
+    }
+
+    .area-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--accent-10);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .area-header { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+
+    .area-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: rgba(255, 125, 84, 0.12);
+      border: 1px solid rgba(255, 125, 84, 0.3);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent-10-light); flex-shrink: 0;
+    }
+
+    .area-title { font-size: 1.15rem; font-weight: 700; color: var(--text-main); line-height: 1.3; }
+    .area-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px; }
+
+    .members-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+
+    .member-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg-60); border: 1px solid var(--border-30);
+      padding: 9px 12px; border-radius: 10px; transition: border-color 0.2s;
+    }
+
+    .member-item:hover { border-color: rgba(255, 125, 84, 0.45); }
+
+    .member-avatar {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--bg-30-elevated); color: var(--accent-10-light);
+      font-size: 0.75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border-30); flex-shrink: 0;
+    }
+
+    .member-info { display: flex; flex-direction: column; }
+    .member-name { font-size: 0.88rem; font-weight: 600; color: var(--text-main); }
+    .member-role { font-size: 0.74rem; color: var(--text-muted); }
+
+    /* ================= FOOTER ================= */
+    footer {
+      background-color: var(--bg-30);
+      border-top: 1px solid var(--border-30);
+      padding: 48px 24px 32px 24px;
+      margin-top: auto;
+      text-align: center;
+    }
+
+    .footer-content { max-width: 820px; margin: 0 auto; }
+    .footer-brand { display: inline-flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .footer-wordmark { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 800; letter-spacing: 3px; color: var(--text-main); }
+    .footer-acronym { font-size: 0.82rem; letter-spacing: 1px; color: var(--accent-10-light); font-weight: 600; text-transform: uppercase; }
+    .footer-desc { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; line-height: 1.5; }
+
+    .social-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-bottom: 28px; }
+    .social-btn {
+      background: var(--bg-60); color: var(--text-main);
+      border: 1px solid var(--border-30); padding: 9px 18px;
+      border-radius: 10px; text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: all 0.2s;
+    }
+    .social-btn:hover { background: var(--accent-10); color: var(--bg-60); border-color: var(--accent-10); font-weight: 600; }
+    .copyright { font-size: 0.78rem; color: var(--text-muted); border-top: 1px solid var(--border-30); padding-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header>
+    <a href="#inicio" class="brand-link" aria-label="NAURU Inicio">
+      <svg class="nauru-emblem" viewBox="0 0 220 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="nauruGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="100%" stop-color="#ffa384"/>
+          </linearGradient>
+        </defs>
+        <polygon points="110,8 122,42 110,104 98,42" fill="url(#nauruGrad)"/>
+        <polygon points="14,26 91,56 105,126 85,72" fill="url(#nauruGrad)"/>
+        <polygon points="44,54 78,68 85,96 58,82" fill="url(#nauruGrad)"/>
+        <polygon points="206,26 129,56 115,126 135,72" fill="url(#nauruGrad)"/>
+        <polygon points="176,54 142,68 135,96 162,82" fill="url(#nauruGrad)"/>
+      </svg>
+      <span class="brand-wordmark">NAURU</span>
+    </a>
+
+    <nav>
+      <ul>
+        <li><a href="#inicio">Inicio</a></li>
+        <li><a href="#proyecto">Laboratorio 3D</a></li>
+        <li><a href="#integrantes">Integrantes</a></li>
+        <li><a href="#contacto">Contacto</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section id="inicio" class="hero-section">
+    <div class="hero-badge">Plataforma de Monitoreo &amp; Telemetría IoT</div>
+    <h1>Gemelo Digital Interactivo <span>3D</span> para Laboratorios</h1>
+    <p class="hero-desc">
+      Ecosistema tecnológico desarrollado por <strong>NAURU</strong> para la supervisión en tiempo real de infraestructura crítica. Visualiza el estado operativo de estaciones de cómputo, impresoras 3D, climatización y sensores ambientales en un entorno 3D renderizado en tiempo real.
+    </p>
+
+    <div class="acronym-strip" aria-label="Significado de las siglas NAURU">
+      <div class="acronym-item"><span class="acronym-letter">N</span><span class="acronym-word">úcleo</span></div>
+      <div class="acronym-item"><span class="acronym-letter">A</span><span class="acronym-word">cadémico</span></div>
+      <div class="acronym-item"><span class="acronym-letter">U</span><span class="acronym-word">nificado</span></div>
+      <div class="acronym-item"><span class="acronym-letter">R</span><span class="acronym-word">esolutivo</span></div>
+      <div class="acronym-item"><span class="acronym-letter">U</span><span class="acronym-word">til</span></div>
+    </div>
+  </section>
+
+  <!-- EL PROYECTO (INTERFAZ INTERACTIVA 3D ESTILO BLENDER) -->
+  <section id="proyecto">
+    <div class="main-project-container">
+      <!-- ZONA IZQUIERDA: VIEWPORT 3D -->
+      <div class="workspace">
+        <div class="lab-topbar">
+          <div>
+            <h2 style="font-size: 1.15rem;">Simulador de Sala • Viewport 3D</h2>
+            <span style="font-size: 0.78rem; color: var(--text-muted);">Clic izq: Rotar 360° • Rueda: Zoom • Clic der: Mover • Clic en equipo: Inspeccionar</span>
+          </div>
+          <div class="live-indicator">
+            <div class="dot"></div>
+            <span>TELEMETRÍA EN VIVO</span>
+          </div>
+        </div>
+
+        <div class="filtros">
+          <button class="btn-filtro activo" onclick="filtrarEquipos('todos', this)">Todos (19)</button>
+          <button class="btn-filtro" onclick="filtrarEquipos('pc', this)">PCs (13)</button>
+          <button class="btn-filtro" onclick="filtrarEquipos('impresora', this)">3D (3)</button>
+          <button class="btn-filtro" onclick="filtrarEquipos('sensor', this)">Sensores (2)</button>
+          <button class="btn-filtro" onclick="filtrarEquipos('clima', this)">Clima (1)</button>
+          <button class="btn-camara" onclick="resetearCamara()">🎥 Centrar Vista</button>
+        </div>
+
+        <div class="mapa-wrapper" id="mapaWrapper">
+          <div class="blender-hud">
+            <div>User Perspective • Eevee Real-Time</div>
+            <div style="color: #38bdf8;">Objects: 19 • Shadows: PCFSoft</div>
+          </div>
+          <div id="tooltip-3d" class="tooltip-3d"></div>
+          <div id="canvas-3d-container"></div>
+        </div>
+      </div>
+
+      <!-- ZONA DERECHA: PANEL DE TELEMETRÍA -->
+      <div class="sidebar">
+        <div id="placeholder-panel" style="margin: auto; text-align: center; color: var(--text-muted);">
+          <p style="font-size: 1rem; margin-bottom: 6px;">Selecciona un equipo</p>
+          <p style="font-size: 0.8rem;">Haz clic sobre cualquier modelo 3D en la sala.</p>
+        </div>
+
+        <div id="detalle-equipo" style="display: none; flex-direction: column; height: 100%;">
+          <div class="header-equipo">
+            <div id="ui-tipo" class="tag-tipo">WORKSTATION</div>
+            <h1 id="ui-nombre" class="titulo-equipo">PC #01</h1>
+            <span id="ui-estado" class="estado-pill" style="background: rgba(16,185,129,0.2); color: #10b981;">● En línea</span>
+          </div>
+
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
+            Haz clic en una tarjeta para graficar:
+          </p>
+
+          <div id="ui-metricas" class="grid-metricas"></div>
+
+          <div class="chart-box">
+            <div class="chart-header">
+              <span id="ui-titulo-grafico">Historial</span>
+              <span style="color: var(--accent-10-light);">En vivo</span>
+            </div>
+            <canvas id="canvasHistorial" height="170"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECCIÓN INTEGRANTES POR ÁREA DE ESPECIALIZACIÓN -->
+  <section id="integrantes" class="section-container">
+    <div class="section-header">
+      <h2 class="section-title">Integrantes por Área</h2>
+      <p class="section-subtitle">Equipo multidisciplinario organizado en células técnicas de desarrollo e investigación dentro de NAURU.</p>
+    </div>
+
+    <div class="areas-grid">
+      <!-- ÁREA 1 -->
+      <article class="area-card">
+        <div class="area-header">
+          <div class="area-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/>
+            </svg>
+          </div>
+          <h3 class="area-title">1) Robótica y Automatización</h3>
+        </div>
+        <p class="area-desc">Diseño de nodos IoT, telemetría de sensores físicos, control embebido y automatización de procesos en laboratorio.</p>
+        <ul class="members-list">
+          <li class="member-item"><div class="member-avatar">R1</div><div class="member-info"><span class="member-name">Integrante 01</span><span class="member-role">Líder de Hardware &amp; Sensores</span></div></li>
+          <li class="member-item"><div class="member-avatar">R2</div><div class="member-info"><span class="member-name">Integrante 02</span><span class="member-role">Sistemas Embebidos &amp; ESP32</span></div></li>
+          <li class="member-item"><div class="member-avatar">R3</div><div class="member-info"><span class="member-name">Integrante 03</span><span class="member-role">Automatización &amp; Actuadores</span></div></li>
+          <li class="member-item"><div class="member-avatar">R4</div><div class="member-info"><span class="member-name">Integrante 04</span><span class="member-role">Protocolos IoT &amp; Telemetría</span></div></li>
+          <li class="member-item"><div class="member-avatar">R5</div><div class="member-info"><span class="member-name">Integrante 05</span><span class="member-role">Prototipado &amp; Manufactura 3D</span></div></li>
+        </ul>
+      </article>
+
+      <!-- ÁREA 2 -->
+      <article class="area-card">
+        <div class="area-header">
+          <div class="area-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4Z"/><path d="M16 14v2a4 4 0 0 1-8 0v-2"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>
+            </svg>
+          </div>
+          <h3 class="area-title">2) Inteligencia Artificial Aplicada</h3>
+        </div>
+        <p class="area-desc">Modelos predictivos de consumo energético, detección de anomalías térmicas y analítica inteligente de datos en tiempo real.</p>
+        <ul class="members-list">
+          <li class="member-item"><div class="member-avatar">IA1</div><div class="member-info"><span class="member-name">Integrante 01</span><span class="member-role">Líder de Ciencia de Datos &amp; ML</span></div></li>
+          <li class="member-item"><div class="member-avatar">IA2</div><div class="member-info"><span class="member-name">Integrante 02</span><span class="member-role">Modelos Predictivos &amp; Series de Tiempo</span></div></li>
+          <li class="member-item"><div class="member-avatar">IA3</div><div class="member-info"><span class="member-name">Integrante 03</span><span class="member-role">Visión Artificial &amp; Gemelo Digital</span></div></li>
+          <li class="member-item"><div class="member-avatar">IA4</div><div class="member-info"><span class="member-name">Integrante 04</span><span class="member-role">Ingeniería de Datos &amp; Pipelines</span></div></li>
+        </ul>
+      </article>
+
+      <!-- ÁREA 3 -->
+      <article class="area-card">
+        <div class="area-header">
+          <div class="area-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <h3 class="area-title">3) Ciberseguridad</h3>
+        </div>
+        <p class="area-desc">Protección de red del laboratorio, cifrado de comunicaciones entre nodos IoT, auditoría de infraestructura y control de acceso.</p>
+        <ul class="members-list">
+          <li class="member-item"><div class="member-avatar">CS1</div><div class="member-info"><span class="member-name">Integrante 01</span><span class="member-role">Líder de Seguridad &amp; Arquitectura</span></div></li>
+          <li class="member-item"><div class="member-avatar">CS2</div><div class="member-info"><span class="member-name">Integrante 02</span><span class="member-role">Seguridad en Redes &amp; Dispositivos IoT</span></div></li>
+          <li class="member-item"><div class="member-avatar">CS3</div><div class="member-info"><span class="member-name">Integrante 03</span><span class="member-role">Hardening &amp; Auditoría de Sistemas</span></div></li>
+          <li class="member-item"><div class="member-avatar">CS4</div><div class="member-info"><span class="member-name">Integrante 04</span><span class="member-role">Criptografía &amp; Monitoreo de Amenazas</span></div></li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer id="contacto">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <svg class="nauru-emblem" viewBox="0 0 220 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="110,8 122,42 110,104 98,42" fill="#ffa384"/>
+          <polygon points="14,26 91,56 105,126 85,72" fill="#f8fafc"/>
+          <polygon points="44,54 78,68 85,96 58,82" fill="#ffa384"/>
+          <polygon points="206,26 129,56 115,126 135,72" fill="#f8fafc"/>
+          <polygon points="176,54 142,68 135,96 162,82" fill="#ffa384"/>
+        </svg>
+        <div class="footer-wordmark">NAURU</div>
+        <div class="footer-acronym">Núcleo · Académico · Unificado · Resolutivo · Útil</div>
+      </div>
+      <p class="footer-desc">Innovación tecnológica, investigación aplicada y desarrollo de gemelos digitales para entornos académicos e inteligentes.</p>
+      <div class="social-links">
+        <a href="https://github.com/YumyumP/NAURU" target="_blank" class="social-btn">GitHub</a>
+        <a href="https://linkedin.com" target="_blank" class="social-btn">LinkedIn</a>
+        <a href="mailto:contacto@nauru.cl" class="social-btn">Correo</a>
+        <a href="https://instagram.com" target="_blank" class="social-btn">Instagram</a>
+      </div>
+      <div class="copyright">
+        &copy; 2026 NAURU — Núcleo Académico Unificado Resolutivo Útil. Todos los derechos reservados.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // =========================================================================
+    // 1. BASE DE DATOS DE TELEMETRÍA (19 EQUIPOS)
+    // =========================================================================
+    const equipos = {
+      'ac-01': {
+        nombre: 'Aire Acondicionado Split',
+        tipo: 'clima',
+        tipoLabel: 'Climatización Central • Muro Fondo',
+        estado: 'Encendido • Modo Frío',
+        metricaActiva: 'setpoint',
+        metricas: {
+          setpoint: { label: 'Temp. Objetivo', unidad: '°C', actual: 21, umbralAlerta: 28, historial: [21, 21, 21, 21, 21] },
+          consumo:  { label: 'Consumo Eléctrico', unidad: 'W', actual: 1120, umbralAlerta: 2000, historial: [980, 1050, 1100, 1140, 1120] }
+        },
+        timestamps: ['20:05', '20:07', '20:09', '20:11', '20:13']
+      },
+      'sensor-01': {
+        nombre: 'Sensor Ambiental #1 (Zona PCs)',
+        tipo: 'sensor',
+        tipoLabel: 'Nodo Multi-sensor (Temp / Humedad / CO2)',
+        estado: 'Normal',
+        metricaActiva: 'temp',
+        metricas: {
+          temp: { label: 'Temperatura', unidad: '°C', actual: 22.4, umbralAlerta: 27, historial: [22.0, 22.1, 22.3, 22.3, 22.4] },
+          hum:  { label: 'Humedad', unidad: '%', actual: 46, umbralAlerta: 75, historial: [45, 45, 46, 46, 46] },
+          co2:  { label: 'Nivel CO2', unidad: 'ppm', actual: 520, umbralAlerta: 950, historial: [480, 495, 505, 515, 520] }
+        },
+        timestamps: ['20:05', '20:07', '20:09', '20:11', '20:13']
+      },
+      'sensor-02': {
+        nombre: 'Sensor Calidad Aire #2 (Zona 3D)',
+        tipo: 'sensor',
+        tipoLabel: 'Monitoreo Emisiones e Impresión 3D',
+        estado: 'Normal',
+        metricaActiva: 'co2',
+        metricas: {
+          temp: { label: 'Temperatura', unidad: '°C', actual: 23.8, umbralAlerta: 28, historial: [23.1, 23.3, 23.5, 23.7, 23.8] },
+          co2:  { label: 'Nivel CO2 / VOC', unidad: 'ppm', actual: 640, umbralAlerta: 900, historial: [590, 610, 620, 635, 640] }
+        },
+        timestamps: ['20:05', '20:07', '20:09', '20:11', '20:13']
+      }
+    };
+
+    const modelos3D = ['Creality Ender-3 V3 #1', 'Creality Ender-3 V3 #2', 'Creality Ender-3 V3 #3'];
+    for (let i = 1; i <= 3; i++) {
+      const id = `imp-0${i}`;
+      equipos[id] = {
+        nombre: `Impresora 3D #${i}`,
+        tipo: 'impresora',
+        tipoLabel: `${modelos3D[i - 1]} • Zona Izquierda`,
+        estado: i === 3 ? 'En espera' : `Imprimiendo (${45 + i * 18}%)`,
+        metricaActiva: 'hotend',
+        metricas: {
+          hotend: { label: 'Temp. Boquilla', unidad: '°C', actual: i === 3 ? 32 : 210, umbralAlerta: 260, historial: i === 3 ? [35, 34, 33, 32, 32] : [208, 210, 210, 211, 210] },
+          cama:   { label: 'Temp. Cama', unidad: '°C', actual: i === 3 ? 26 : 60, umbralAlerta: 100, historial: i === 3 ? [28, 27, 26, 26, 26] : [60, 60, 60, 60, 60] }
+        },
+        timestamps: ['20:05', '20:07', '20:09', '20:11', '20:13']
+      };
+    }
+
+    for (let i = 1; i <= 13; i++) {
+      const numStr = i.toString().padStart(2, '0');
+      const id = `pc-${numStr}`;
+      const esEspecial = i === 13;
+      const cpuBase = 15 + ((i * 11) % 55);
+      const ramBase = +(8.4 + ((i * 2.3) % 16)).toFixed(1);
+
+      equipos[id] = {
+        nombre: esEspecial ? 'Computador N°13 (Estación Diseño/3D)' : `Computador #${numStr}`,
+        tipo: 'pc',
+        tipoLabel: esEspecial ? 'Workstation dedicada • Junto a Ventanal' : `Estación de Cómputo • Fila ${Math.ceil(i / 4)}`,
+        estado: i % 4 === 0 ? 'Reposo' : 'En uso',
+        metricaActiva: 'cpu',
+        metricas: {
+          cpu:  { label: 'Uso CPU', unidad: '%', actual: cpuBase, umbralAlerta: 90, historial: [cpuBase - 6, cpuBase - 2, cpuBase + 4, cpuBase + 1, cpuBase] },
+          temp: { label: 'Temp. Torre', unidad: '°C', actual: 42 + Math.floor(cpuBase * 0.35), umbralAlerta: 85, historial: [44, 46, 49, 48, 42 + Math.floor(cpuBase * 0.35)] },
+          ram:  { label: 'Uso RAM', unidad: 'GB', actual: ramBase, umbralAlerta: 30, historial: [ramBase - 1.2, ramBase - 0.8, ramBase - 0.3, ramBase, ramBase] }
+        },
+        timestamps: ['20:05', '20:07', '20:09', '20:11', '20:13']
+      };
+    }
+
+    // =========================================================================
+    // 2. MOTOR 3D ESTILO BLENDER (THREE.JS + SOMBRAS + ORBITCONTROLS)
+    // =========================================================================
+    const container3D = document.getElementById('canvas-3d-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111622); // Fondo estilo Blender Viewport oscuro
+    scene.fog = new THREE.FogExp2(0x111622, 0.022);
+
+    const camera = new THREE.PerspectiveCamera(42, container3D.clientWidth / container3D.clientHeight, 0.1, 100);
+    const defaultCamPos = new THREE.Vector3(10.5, 9.2, 12.5);
+    const defaultTarget = new THREE.Vector3(0, 1.0, 0);
+    camera.position.copy(defaultCamPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(container3D.clientWidth, container3D.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    container3D.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.copy(defaultTarget);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.maxPolarAngle = Math.PI / 2 - 0.04; // Evitar atravesar el piso
+    controls.minDistance = 4;
+    controls.maxDistance = 24;
+
+    function resetearCamara() {
+      camera.position.copy(defaultCamPos);
+      controls.target.copy(defaultTarget);
+      controls.update();
+    }
+
+    // Iluminación de estudio estilo Blender (3-Point Lighting + Ambient)
+    const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x0f172a, 0.75);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    dirLight.position.set(8, 14, 9);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 2;
+    dirLight.shadow.camera.far = 35;
+    const d = 10;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    dirLight.shadow.bias = -0.0005;
+    scene.add(dirLight);
+
+    // Luz de acento cálida desde el ventanal
+    const windowLight = new THREE.PointLight(0xff7d54, 0.65, 16);
+    windowLight.position.set(-5.5, 3.2, -3.5);
+    scene.add(windowLight);
+
+    // Grilla infinita estilo Blender Viewport
+    const gridHelper = new THREE.GridHelper(32, 32, 0x334155, 0x1e293b);
+    gridHelper.position.y = -0.01;
+    scene.add(gridHelper);
+
+    // Materiales PBR (Physically Based Rendering)
+    const matPiso = new THREE.MeshStandardMaterial({ color: 0x13221a, roughness: 0.65, metalness: 0.1 });
+    const matMuro = new THREE.MeshStandardMaterial({ color: 0x182b49, roughness: 0.85, metalness: 0.05 });
+    const matMuroBorde = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+    const matMaderaMesa = new THREE.MeshStandardMaterial({ color: 0x1e3a2f, roughness: 0.55, metalness: 0.1 });
+    const matMetalOscuro = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.35, metalness: 0.75 });
+    const matPlasticoBlanco = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3, metalness: 0.1 });
+    const matVidrio = new THREE.MeshPhysicalMaterial({
+      color: 0x38bdf8, transparent: true, opacity: 0.25, roughness: 0.1, transmission: 0.5
+    });
+
+    // Estructura de la Sala (Corte arquitectónico estilo maqueta Blender)
+    const salaGroup = new THREE.Group();
+    scene.add(salaGroup);
+
+    // Piso principal (13m x 10m)
+    const piso = new THREE.Mesh(new THREE.BoxGeometry(13.2, 0.2, 10.2), matPiso);
+    piso.position.y = -0.1;
+    piso.receiveShadow = true;
+    salaGroup.add(piso);
+
+    // Muro Fondo (Z = -5)
+    const muroFondo = new THREE.Mesh(new THREE.BoxGeometry(13.2, 3.6, 0.25), matMuro);
+    muroFondo.position.set(0, 1.8, -5.0);
+    muroFondo.receiveShadow = true;
+    muroFondo.castShadow = true;
+    salaGroup.add(muroFondo);
+
+    // Pizarra acrílica en muro fondo
+    const pizarra = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.3, 0.06), matPlasticoBlanco);
+    pizarra.position.set(0.5, 1.85, -4.85);
+    salaGroup.add(pizarra);
+
+    // Muro Izquierdo con ventanal panorámico (X = -6.5)
+    const muroIzqInf = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.1, 10.2), matMuro);
+    muroIzqInf.position.set(-6.5, 0.55, 0);
+    muroIzqInf.receiveShadow = true;
+    muroIzqInf.castShadow = true;
+    salaGroup.add(muroIzqInf);
+
+    const muroIzqSup = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.5, 10.2), matMuro);
+    muroIzqSup.position.set(-6.5, 3.35, 0);
+    salaGroup.add(muroIzqSup);
+
+    const muroIzqPilar1 = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.0, 2.5), matMuro);
+    muroIzqPilar1.position.set(-6.5, 2.1, -3.75);
+    salaGroup.add(muroIzqPilar1);
+
+    const muroIzqPilar2 = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.0, 3.5), matMuro);
+    muroIzqPilar2.position.set(-6.5, 2.1, 3.25);
+    salaGroup.add(muroIzqPilar2);
+
+    // Ventanal con marco salmón
+    const marcoVentana = new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 2.0, 4.0),
+      new THREE.MeshStandardMaterial({ color: 0xff7d54, roughness: 0.4, metalness: 0.6, wireframe: true })
+    );
+    marcoVentana.position.set(-6.5, 2.1, -0.5);
+    salaGroup.add(marcoVentana);
+
+    const cristalVentana = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.95, 3.95), matVidrio);
+    cristalVentana.position.set(-6.5, 2.1, -0.5);
+    salaGroup.add(cristalVentana);
+
+    // Registro de objetos interactivos para Raycasting
+    const objetosInteractivos = []; // Meshes seleccionables
+    const gruposEquipos = {};       // Map id -> THREE.Group
+    const ledsEquipos = {};         // Map id -> Mesh LED
+    const extrusion3D = {};         // Map id -> Mesh pieza 3D animada
+    const seleccionRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.45, 0.56, 32),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
+    );
+    seleccionRing.rotation.x = -Math.PI / 2;
+    seleccionRing.visible = false;
+    scene.add(seleccionRing);
+
+    function registrarEquipo3D(id, grupo, alturaRing = 0.02, radioRing = 0.55) {
+      grupo.userData = { id, tipo: equipos[id].tipo, radioRing, alturaRing };
+      grupo.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          child.userData.equipoId = id;
+          objetosInteractivos.push(child);
+        }
+      });
+      gruposEquipos[id] = grupo;
+      scene.add(grupo);
+    }
+
+    // Constructor de Estación PC (Monitor + Torre + Teclado + Silla)
+    function crearModeloPC(id, x, y, z, rotY = 0) {
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+      g.rotation.y = rotY;
+
+      // Base y cuello monitor
+      const baseMon = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.18), matMetalOscuro);
+      baseMon.position.set(0, 0.01, -0.12);
+      g.add(baseMon);
+
+      const cuelloMon = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.04), matMetalOscuro);
+      cuelloMon.position.set(0, 0.12, -0.15);
+      g.add(cuelloMon);
+
+      // Pantalla monitor con borde acento
+      const carcasaMon = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.36, 0.03), matMetalOscuro);
+      carcasaMon.position.set(0, 0.30, -0.12);
+      g.add(carcasaMon);
+
+      const pantallaEmissive = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.58, 0.32),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, emissive: 0x0ea5e9, emissiveIntensity: 0.35, roughness: 0.2 })
+      );
+      pantallaEmissive.position.set(0, 0.30, -0.104);
+      g.add(pantallaEmissive);
+
+      // Torre CPU al costado
+      const torre = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.42, 0.40), matMetalOscuro);
+      torre.position.set(0.45, 0.21, -0.05);
+      g.add(torre);
+
+      // LED de estado
+      const led = new THREE.Mesh(
+        new THREE.SphereGeometry(0.018, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0x10b981 })
+      );
+      led.position.set(0.45, 0.36, 0.155);
+      g.add(led);
+      ledsEquipos[id] = led;
+
+      // Teclado y mouse
+      const teclado = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.015, 0.14), matMetalOscuro);
+      teclado.position.set(-0.04, 0.008, 0.12);
+      g.add(teclado);
+
+      const mouse = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.10), matPlasticoBlanco);
+      mouse.position.set(0.24, 0.01, 0.12);
+      g.add(mouse);
+
+      // Silla ergonómica simplificada
+      const asiento = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 16), matMetalOscuro);
+      asiento.position.set(0, -0.32, 0.45);
+      g.add(asiento);
+
+      const respaldo = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.42, 0.05), matMetalOscuro);
+      respaldo.position.set(0, -0.06, 0.64);
+      g.add(respaldo);
+
+      const tuboSilla = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.42, 8), matMetalOscuro);
+      tuboSilla.position.set(0, -0.54, 0.45);
+      g.add(tuboSilla);
+
+      registrarEquipo3D(id, g, -0.74, 0.58);
+    }
+
+    // Construir 3 filas de mesones + 12 PCs
+    const filasZ = [-2.5, 0.2, 2.9];
+    let pcIndex = 1;
+    filasZ.forEach((fz) => {
+      // Mesón largo (5.8m ancho)
+      const mesonGroup = new THREE.Group();
+      const tablero = new THREE.Mesh(new THREE.BoxGeometry(6.0, 0.06, 0.85), matMaderaMesa);
+      tablero.position.set(1.2, 0.75, fz);
+      tablero.castShadow = true;
+      tablero.receiveShadow = true;
+      mesonGroup.add(tablero);
+
+      [-1.6, 4.0].forEach((px) => {
+        [-0.35, 0.35].forEach((pz) => {
+          const pata = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.75, 0.06), matMetalOscuro);
+          pata.position.set(px, 0.375, fz + pz);
+          pata.castShadow = true;
+          mesonGroup.add(pata);
+        });
+      });
+      salaGroup.add(mesonGroup);
+
+      // 4 PCs por fila
+      for (let col = 0; col < 4; col++) {
+        const px = -0.9 + col * 1.4;
+        const id = `pc-${pcIndex.toString().padStart(2, '0')}`;
+        crearModeloPC(id, px, 0.78, fz, 0);
+        pcIndex++;
+      }
+    });
+
+    // Escritorio dedicado y PC N°13 junto al ventanal izquierdo
+    const mesa13 = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.06, 1.5), matMaderaMesa);
+    mesa13.position.set(-5.3, 0.75, -2.8);
+    mesa13.castShadow = true;
+    mesa13.receiveShadow = true;
+    salaGroup.add(mesa13);
+    [-5.75, -4.85].forEach((px) => {
+      [-3.45, -2.15].forEach((pz) => {
+        const pata = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.75, 0.06), matMetalOscuro);
+        pata.position.set(px, 0.375, pz);
+        salaGroup.add(pata);
+      });
+    });
+    crearModeloPC('pc-13', -5.3, 0.78, -2.8, Math.PI / 2);
+
+    // Mesón lateral izquierdo y 3 Impresoras 3D
+    const meson3D = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.75, 4.2), matMuroBorde);
+    meson3D.position.set(-5.4, 0.375, 1.2);
+    meson3D.castShadow = true;
+    meson3D.receiveShadow = true;
+    salaGroup.add(meson3D);
+
+    for (let i = 1; i <= 3; i++) {
+      const id = `imp-0${i}`;
+      const pz = -0.3 + (i - 1) * 1.45;
+      const g = new THREE.Group();
+      g.position.set(-5.4, 0.75, pz);
+      g.rotation.y = Math.PI / 2;
+
+      // Base impresora
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.08, 0.46), matMetalOscuro);
+      base.position.y = 0.04;
+      g.add(base);
+
+      // Cama caliente
+      const cama = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.02, 0.34), matPlasticoBlanco);
+      cama.position.y = 0.10;
+      g.add(cama);
+
+      // Marco pórtico (estilo Ender 3)
+      const posteIzq = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.52, 0.03), matMetalOscuro);
+      posteIzq.position.set(-0.20, 0.32, 0);
+      g.add(posteIzq);
+
+      const posteDer = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.52, 0.03), matMetalOscuro);
+      posteDer.position.set(0.20, 0.32, 0);
+      g.add(posteDer);
+
+      const puenteSup = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.03, 0.03), matMetalOscuro);
+      puenteSup.position.set(0, 0.58, 0);
+      g.add(puenteSup);
+
+      // Carrete filamento arriba
+      const carrete = new THREE.Mesh(
+        new THREE.TorusGeometry(0.09, 0.028, 10, 24),
+        new THREE.MeshStandardMaterial({ color: 0xff7d54, roughness: 0.4 })
+      );
+      carrete.position.set(0, 0.68, 0);
+      g.add(carrete);
+
+      // Cabezal extrusor móvil
+      const cabezal = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 0.08, 0.08),
+        new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.3 })
+      );
+      cabezal.position.set(0, 0.24, 0);
+      g.add(cabezal);
+      extrusion3D[id] = cabezal;
+
+      // Pieza impresa en cama
+      const pieza = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.08, 0.09, 16),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: i === 3 ? 0 : 0.35 })
+      );
+      pieza.position.set(0, 0.15, 0);
+      g.add(pieza);
+
+      // LED
+      const led = new THREE.Mesh(
+        new THREE.SphereGeometry(0.02, 10, 10),
+        new THREE.MeshBasicMaterial({ color: i === 3 ? 0x64748b : 0xf59e0b })
+      );
+      led.position.set(0.18, 0.05, 0.235);
+      g.add(led);
+      ledsEquipos[id] = led;
+
+      registrarEquipo3D(id, g, 0.01, 0.42);
+    }
+
+    // Aire Acondicionado Split en Muro Fondo
+    const acGroup = new THREE.Group();
+    acGroup.position.set(0.5, 2.95, -4.78);
+    const acBody = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.36, 0.26), matPlasticoBlanco);
+    acGroup.add(acBody);
+    const acDeflector = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 0.08), matMetalOscuro);
+    acDeflector.position.set(0, -0.14, 0.12);
+    acGroup.add(acDeflector);
+    const acLed = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 10), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+    acLed.position.set(0.65, -0.05, 0.135);
+    acGroup.add(acLed);
+    ledsEquipos['ac-01'] = acLed;
+    registrarEquipo3D('ac-01', acGroup, -2.93, 0.9);
+
+    // Sensores IoT (Sensor 1 en muro fondo, Sensor 2 en muro izquierdo zona 3D)
+    function crearSensor3D(id, x, y, z, rotY) {
+      const sg = new THREE.Group();
+      sg.position.set(x, y, z);
+      sg.rotation.y = rotY;
+      const caja = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.22, 0.10), matMetalOscuro);
+      sg.add(caja);
+      const led = new THREE.Mesh(new THREE.SphereGeometry(0.032, 12, 12), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+      led.position.set(0, 0, 0.055);
+      sg.add(led);
+      ledsEquipos[id] = led;
+      registrarEquipo3D(id, sg, -y + 0.02, 0.35);
+    }
+    crearSensor3D('sensor-01', 3.4, 2.2, -4.82, 0);
+    crearSensor3D('sensor-02', -6.32, 2.1, 1.2, Math.PI / 2);
+
+    // =========================================================================
+    // 3. INTERACCIÓN MOUSE (RAYCASTING + HOVER + CLICK)
+    // =========================================================================
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const tooltipEl = document.getElementById('tooltip-3d');
+    let equipoHoverId = null;
+
+    function actualizarMouse(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    }
+
+    renderer.domElement.addEventListener('mousemove', (e) => {
+      actualizarMouse(e);
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(objetosInteractivos, false);
+
+      if (intersects.length > 0) {
+        const hit = intersects[0].object;
+        const id = hit.userData.equipoId;
+        if (id && equipos[id] && gruposEquipos[id].visible) {
+          equipoHoverId = id;
+          renderer.domElement.style.cursor = 'pointer';
+          tooltipEl.style.display = 'block';
+          tooltipEl.innerText = equipos[id].nombre;
+          const rect = document.getElementById('mapaWrapper').getBoundingClientRect();
+          tooltipEl.style.left = `${e.clientX - rect.left + 14}px`;
+          tooltipEl.style.top = `${e.clientY - rect.top - 12}px`;
+          return;
+        }
+      }
+      equipoHoverId = null;
+      renderer.domElement.style.cursor = 'grab';
+      tooltipEl.style.display = 'none';
+    });
+
+    renderer.domElement.addEventListener('click', (e) => {
+      actualizarMouse(e);
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(objetosInteractivos, false);
+      if (intersects.length > 0) {
+        const id = intersects[0].object.userData.equipoId;
+        if (id && equipos[id] && gruposEquipos[id].visible) {
+          seleccionarEquipo(id);
+        }
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (!container3D.clientWidth || !container3D.clientHeight) return;
+      camera.aspect = container3D.clientWidth / container3D.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container3D.clientWidth, container3D.clientHeight);
+    });
+
+    // =========================================================================
+    // 4. PANEL DE TELEMETRÍA Y GRÁFICOS CHART.JS
+    // =========================================================================
+    let equipoSeleccionadoId = null;
+    let chart = null;
+
+    function seleccionarEquipo(id) {
+      equipoSeleccionadoId = id;
+      const grupo = gruposEquipos[id];
+      if (grupo) {
+        seleccionRing.visible = true;
+        seleccionRing.position.set(
+          grupo.position.x,
+          grupo.position.y + grupo.userData.alturaRing,
+          grupo.position.z
+        );
+        const s = grupo.userData.radioRing / 0.5;
+        seleccionRing.scale.set(s, s, 1);
+      }
+
+      document.getElementById('placeholder-panel').style.display = 'none';
+      document.getElementById('detalle-equipo').style.display = 'flex';
+      renderizarPanelDerecho();
+    }
+
+    function cambiarMetricaGrafico(claveMetrica) {
+      if (!equipoSeleccionadoId) return;
+      equipos[equipoSeleccionadoId].metricaActiva = claveMetrica;
+      renderizarPanelDerecho();
+    }
+
+    function renderizarPanelDerecho() {
+      const eq = equipos[equipoSeleccionadoId];
+      if (!eq) return;
+
+      document.getElementById('ui-tipo').innerText = eq.tipoLabel;
+      document.getElementById('ui-nombre').innerText = eq.nombre;
+      document.getElementById('ui-estado').innerText = `● ${eq.estado}`;
+
+      const contenedorMetricas = document.getElementById('ui-metricas');
+      contenedorMetricas.innerHTML = '';
+
+      Object.entries(eq.metricas).forEach(([clave, data]) => {
+        const esActiva = eq.metricaActiva === clave;
+        const enAlerta = data.actual >= data.umbralAlerta;
+
+        const card = document.createElement('div');
+        card.className = `card-metrica ${esActiva ? 'activa' : ''}`;
+        card.onclick = () => cambiarMetricaGrafico(clave);
+        card.innerHTML = `
+          <div class="metrica-label">${data.label}</div>
+          <div class="metrica-valor" style="color: ${enAlerta ? '#ef4444' : '#f8fafc'}">
+            ${data.actual} <span style="font-size: 0.8rem; color: var(--text-muted);">${data.unidad}</span>
+          </div>
+        `;
+        contenedorMetricas.appendChild(card);
+      });
+
+      const metricaObj = eq.metricas[eq.metricaActiva];
+      document.getElementById('ui-titulo-grafico').innerText = `Historial: ${metricaObj.label}`;
+
+      const ctx = document.getElementById('canvasHistorial').getContext('2d');
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: eq.timestamps,
+          datasets: [{
+            label: metricaObj.label,
+            data: eq.metricas[eq.metricaActiva].historial,
+            borderColor: '#ff7d54',
+            backgroundColor: 'rgba(255, 125, 84, 0.16)',
+            borderWidth: 2,
+            pointRadius: 2.5,
+            tension: 0.35,
+            fill: true
+          }]
+        },
+        options: {
+          animation: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: '#162c52' } },
+            y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: '#294a80' } }
+          }
+        }
+      });
+    }
+
+    function filtrarEquipos(tipo, btn) {
+      document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('activo'));
+      btn.classList.add('activo');
+
+      Object.entries(gruposEquipos).forEach(([id, grupo]) => {
+        const visible = (tipo === 'todos' || equipos[id].tipo === tipo);
+        grupo.visible = visible;
+        if (!visible && equipoSeleccionadoId === id) {
+          seleccionRing.visible = false;
+        }
+      });
+    }
+
+    function procesarLecturaEnVivo(idEquipo, nuevasLecturas) {
+      const eq = equipos[idEquipo];
+      if (!eq) return;
+
+      const ahora = new Date();
+      const horaStr = `${ahora.getHours().toString().padStart(2,'0')}:${ahora.getMinutes().toString().padStart(2,'0')}:${ahora.getSeconds().toString().padStart(2,'0')}`;
+
+      eq.timestamps.push(horaStr);
+      if (eq.timestamps.length > 10) eq.timestamps.shift();
+
+      let hayAlerta = false;
+      Object.entries(nuevasLecturas).forEach(([clave, valor]) => {
+        if (eq.metricas[clave]) {
+          eq.metricas[clave].actual = valor;
+          eq.metricas[clave].historial.push(valor);
+          if (eq.metricas[clave].historial.length > 10) eq.metricas[clave].historial.shift();
+          if (valor >= eq.metricas[clave].umbralAlerta) hayAlerta = true;
+        }
+      });
+
+      if (ledsEquipos[idEquipo]) {
+        if (hayAlerta) {
+          ledsEquipos[idEquipo].material.color.setHex(0xef4444);
+          eq.estado = '⚠️ Umbral excedido';
+        } else if (idEquipo.startsWith('imp-') && idEquipo !== 'imp-03') {
+          ledsEquipos[idEquipo].material.color.setHex(0xf59e0b);
+        } else if (idEquipo !== 'imp-03') {
+          ledsEquipos[idEquipo].material.color.setHex(0x10b981);
+        }
+      }
+
+      if (equipoSeleccionadoId === idEquipo) {
+        renderizarPanelDerecho();
+      }
+    }
+
+    // =========================================================================
+    // 5. BUCLE DE RENDERIZADO 3D Y SIMULACIÓN EN VIVO
+    // =========================================================================
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // Animación suave de los cabezales de las impresoras 3D activas
+      if (extrusion3D['imp-01']) extrusion3D['imp-01'].position.x = Math.sin(t * 2.5) * 0.11;
+      if (extrusion3D['imp-02']) extrusion3D['imp-02'].position.x = Math.cos(t * 2.1) * 0.11;
+
+      // Pulso en anillo de selección
+      if (seleccionRing.visible) {
+        const pulseScale = 1 + Math.sin(t * 4) * 0.06;
+        const baseS = gruposEquipos[equipoSeleccionadoId].userData.radioRing / 0.5;
+        seleccionRing.scale.set(baseS * pulseScale, baseS * pulseScale, 1);
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    seleccionarEquipo('pc-13');
+    animate();
+
+    setInterval(() => {
+      procesarLecturaEnVivo('sensor-01', {
+        temp: +(21.8 + Math.random() * 2.2).toFixed(1),
+        hum: Math.floor(44 + Math.random() * 6),
+        co2: Math.floor(490 + Math.random() * 90)
+      });
+
+      procesarLecturaEnVivo('sensor-02', {
+        temp: +(23.0 + Math.random() * 2.5).toFixed(1),
+        co2: Math.floor(610 + Math.random() * 140)
+      });
+
+      procesarLecturaEnVivo('ac-01', {
+        setpoint: 21,
+        consumo: Math.floor(1050 + Math.random() * 180)
+      });
+
+      procesarLecturaEnVivo('imp-01', { hotend: Math.floor(208 + Math.random() * 6), cama: 60 });
+      procesarLecturaEnVivo('imp-02', { hotend: Math.floor(212 + Math.random() * 7), cama: 60 });
+      procesarLecturaEnVivo('imp-03', { hotend: Math.floor(30 + Math.random() * 4), cama: 26 });
+
+      for (let i = 1; i <= 13; i++) {
+        const id = `pc-${i.toString().padStart(2, '0')}`;
+        const cpuActual = equipos[id].metricas.cpu.actual;
+        const nuevoCpu = Math.max(5, Math.min(95, cpuActual + Math.floor(Math.random() * 17) - 8));
+        const nuevaTemp = Math.floor(40 + nuevoCpu * 0.42);
+        const ramActual = equipos[id].metricas.ram.actual;
+        const nuevaRam = +(Math.max(4, Math.min(31, ramActual + (Math.random() * 1.2 - 0.6)))).toFixed(1);
+
+        procesarLecturaEnVivo(id, { cpu: nuevoCpu, temp: nuevaTemp, ram: nuevaRam });
+      }
+    }, 2500);
+  </script>
+</body>
+</html>

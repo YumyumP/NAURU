@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gemelo Digital - Sala de Informática</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --bg-panel: #111827;
+      --accent: #06b6d4;
+      --ok: #10b981;
+      --danger: #ef4444;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ZONA IZQUIERDA: PLANO DE LA SALA */
+    .workspace {
+      flex: 1.8;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      position: relative;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--ok);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--ok);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .filtros { display: flex; gap: 8px; margin-bottom: 12px; }
+
+    .btn-filtro {
+      background: var(--bg-panel);
+      color: var(--text-muted);
+      border: 1px solid #374151;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: 0.2s;
+    }
+
+    .btn-filtro:hover, .btn-filtro.activo {
+      background: var(--accent);
+      color: #0b0f19;
+      font-weight: 600;
+      border-color: var(--accent);
+    }
+
+    .mapa-wrapper {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid #374151;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+    }
+
+    svg { width: 95%; height: 95%; max-height: 600px; }
+
+    .equipo { cursor: pointer; transition: filter 0.2s ease; }
+    .equipo:hover { filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.8)); }
+
+    .equipo.seleccionado .halo-seleccion {
+      stroke: var(--accent);
+      stroke-width: 3px;
+      stroke-dasharray: 5,4;
+      animation: girarHalo 10s linear infinite;
+    }
+
+    @keyframes girarHalo {
+      from { stroke-dashoffset: 0; }
+      to { stroke-dashoffset: 40; }
+    }
+
+    .equipo.alerta .alerta-indicador {
+      fill: var(--danger) !important;
+      animation: parpadeoAlerta 0.8s infinite alternate;
+    }
+
+    @keyframes parpadeoAlerta {
+      from { opacity: 1; }
+      to { opacity: 0.25; }
+    }
+
+    .oculto { opacity: 0.12; pointer-events: none; }
+
+    /* ZONA DERECHA: PANEL DE CONTROL */
+    .sidebar {
+      flex: 1;
+      min-width: 370px;
+      max-width: 440px;
+      background-color: var(--bg-panel);
+      border-left: 1px solid #374151;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .header-equipo {
+      border-bottom: 1px solid #374151;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+    }
+
+    .tag-tipo {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .titulo-equipo { font-size: 1.4rem; margin: 6px 0; }
+
+    .estado-pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .grid-metricas {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .card-metrica {
+      background: var(--bg-dark);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .card-metrica:hover, .card-metrica.activa {
+      border-color: var(--accent);
+      background: rgba(6, 182, 212, 0.08);
+    }
+
+    .metrica-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+    .metrica-valor { font-size: 1.3rem; font-weight: 700; color: var(--text-main); }
+
+    .chart-box {
+      background: var(--bg-dark);
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      margin-top: auto;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PLANO DE LA SALA -->
+  <div class="workspace">
+    <div class="topbar">
+      <div>
+        <h2 style="font-size: 1.3rem;">Laboratorio de Cómputo e Impresión</h2>
+        <span style="font-size: 0.85rem; color: var(--text-muted);">Vista de planta interactiva (Gemelo Digital)</span>
+      </div>
+      <div class="live-indicator">
+        <div class="dot"></div>
+        <span>TELEMETRÍA EN VIVO</span>
+      </div>
+    </div>
+
+    <div class="filtros">
+      <button class="btn-filtro activo" onclick="filtrarEquipos('todos', this)">Todos (6)</button>
+      <button class="btn-filtro" onclick="filtrarEquipos('sensor', this)">Sensores Ambientales</button>
+      <button class="btn-filtro" onclick="filtrarEquipos('pc', this)">Computadores</button>
+      <button class="btn-filtro" onclick="filtrarEquipos('impresora', this)">Impresoras 3D</button>
+    </div>
+
+    <div class="mapa-wrapper">
+      <svg viewBox="0 0 740 500">
+        <defs>
+          <pattern id="piso-baldosas" width="40" height="40" patternUnits="userSpaceOnUse">
+            <rect width="40" height="40" fill="#131c2e" />
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="1"/>
+          </pattern>
+        </defs>
+
+        <!-- Piso y muros -->
+        <rect x="25" y="25" width="690" height="450" rx="10" fill="url(#piso-baldosas)" stroke="#475569" stroke-width="4"/>
+        
+        <!-- Puerta de acceso despejada -->
+        <path d="M 330 475 L 330 435 A 40 40 0 0 1 390 435 L 390 475" fill="none" stroke="#64748b" stroke-dasharray="4,4" stroke-width="2"/>
+        <text x="360" y="465" fill="#64748b" font-size="10" text-anchor="middle">ACCESO</text>
+
+        <!-- Ventanal superior -->
+        <rect x="150" y="21" width="440" height="8" fill="#06b6d4" rx="3"/>
+        <text x="370" y="15" fill="#06b6d4" font-size="10" text-anchor="middle">VENTANAL EXTERIOR</text>
+
+        <!-- Pizarra digital lateral -->
+        <rect x="29" y="180" width="8" height="140" fill="#334155" rx="2"/>
+        <text x="22" y="250" fill="#64748b" font-size="9" text-anchor="middle" transform="rotate(-90, 22, 250)">PIZARRA DIGITAL</text>
+
+        <!-- Mesones -->
+        <rect x="90" y="100" width="160" height="300" rx="8" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+        <text x="170" y="390" fill="#64748b" font-size="11" text-anchor="middle">Mesa de Trabajo PC #1</text>
+
+        <rect x="490" y="100" width="160" height="300" rx="8" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+        <text x="570" y="390" fill="#64748b" font-size="11" text-anchor="middle">Estación Prototipado 3D</text>
+
+        <!-- ================= EQUIPOS INTERACTIVOS ================= -->
+
+        <!-- 1. Sensor Ambiental Norte -->
+        <g id="sensor-norte" class="equipo" data-tipo="sensor" onclick="seleccionarEquipo('sensor-norte')">
+          <rect class="halo-seleccion" x="340" y="40" width="60" height="50" rx="8" fill="none"/>
+          <rect x="345" y="45" width="50" height="40" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+          <circle class="alerta-indicador" cx="370" cy="65" r="8" fill="#10b981"/>
+          <text x="370" y="104" fill="#e2e8f0" font-size="11" font-weight="600" text-anchor="middle">Sensor Ambiental 01</text>
+        </g>
+
+        <!-- 2. Sensor CO2 Sur (Ubicado a la derecha del acceso para no tapar la puerta) -->
+        <g id="sensor-sur" class="equipo" data-tipo="sensor" onclick="seleccionarEquipo('sensor-sur')">
+          <rect class="halo-seleccion" x="425" y="385" width="60" height="50" rx="8" fill="none"/>
+          <rect x="430" y="390" width="50" height="40" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+          <circle class="alerta-indicador" cx="455" cy="410" r="8" fill="#10b981"/>
+          <text x="455" y="448" fill="#e2e8f0" font-size="11" font-weight="600" text-anchor="middle">Sensor CO2 02</text>
+        </g>
+
+        <!-- 3. PC Torre 01 -->
+        <g id="pc-01" class="equipo" data-tipo="pc" onclick="seleccionarEquipo('pc-01')">
+          <rect class="halo-seleccion" x="125" y="132" width="110" height="72" rx="10" fill="none"/>
+          <rect x="135" y="140" width="70" height="45" rx="4" fill="#0f172a" stroke="#06b6d4" stroke-width="2"/>
+          <rect x="165" y="185" width="10" height="8" fill="#475569"/>
+          <rect x="210" y="140" width="18" height="52" rx="3" fill="#334155" stroke="#64748b"/>
+          <circle cx="219" cy="150" r="2" fill="#10b981"/>
+          <text x="175" y="216" fill="#e2e8f0" font-size="11" font-weight="600" text-anchor="middle">PC Estación 01</text>
+        </g>
+
+        <!-- 4. PC Torre 02 -->
+        <g id="pc-02" class="equipo" data-tipo="pc" onclick="seleccionarEquipo('pc-02')">
+          <rect class="halo-seleccion" x="125" y="242" width="110" height="72" rx="10" fill="none"/>
+          <rect x="135" y="250" width="70" height="45" rx="4" fill="#0f172a" stroke="#06b6d4" stroke-width="2"/>
+          <rect x="165" y="295" width="10" height="8" fill="#475569"/>
+          <rect x="210" y="250" width="18" height="52" rx="3" fill="#334155" stroke="#64748b"/>
+          <circle cx="219" cy="260" r="2" fill="#10b981"/>
+          <text x="175" y="326" fill="#e2e8f0" font-size="11" font-weight="600" text-anchor="middle">PC Estación 02</text>
+        </g>
+
+        <!-- 5. Impresora 3D #1 -->
+        <g id="imp-01" class="equipo" data-tipo="impresora" onclick="seleccionarEquipo('imp-01')">
+          <rect class="halo-seleccion" x="525" y="128" width="90" height="74" rx="10" fill="none"/>
+          <rect x="535" y="135" width="70" height="60" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+          <rect x="545" y="145" width="50" height="40" fill="rgba(245, 158, 11, 0.15)" stroke="#f59e0b" stroke-dasharray="2,2"/>
+          <circle cx="570" cy="165" r="4" fill="#f59e0b"/>
+          <text x="570" y="214" fill="#e2e8f0" font-size="11" font-weight="600" text-anchor="middle">Impresora 3D #1</text>
+        </g>
+
+        <!-- 6. Impresora 3D #2 -->
+        <g id="imp-02" class="equipo" data-tipo="impresora" onclick="seleccionarEquipo('imp-02')">
+          <rect class="halo-seleccion" x="525" y="238" width="90" height="74" rx="10" fill="none"/>
+          <rect x="535" y="245" width="70" height="60" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+          <rect x="545" y="255" width="50" height="40" fill="rgba(245, 158, 11, 0.15)" stroke="#f59e0b" stroke-dasharray="2,2"/>
+          <circle cx="570" cy="275" r="4" fill="#64748b"/> 
+          <text x="570" y="324" fill="#e2e8f0" font-size="11" font-weight="600" text-anchor="middle">Impresora 3D #2</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- PANEL DERECHO: TELEMETRÍA E HISTORIAL -->
+  <div class="sidebar">
+    <div id="placeholder-panel" style="margin: auto; text-align: center; color: var(--text-muted);">
+      <p style="font-size: 1.1rem; margin-bottom: 8px;">Selecciona un equipo de la sala</p>
+      <p style="font-size: 0.85rem;">Haz clic en cualquier computador, sensor o impresora 3D para ver sus datos en vivo.</p>
+    </div>
+
+    <div id="detalle-equipo" style="display: none; flex-direction: column; height: 100%;">
+      <div class="header-equipo">
+        <div id="ui-tipo" class="tag-tipo">SENSOR AMBIENTAL</div>
+        <h1 id="ui-nombre" class="titulo-equipo">Sensor Ambiental 01</h1>
+        <span id="ui-estado" class="estado-pill" style="background: rgba(16,185,129,0.2); color: #10b981;">● Normal</span>
+      </div>
+
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+        Haz clic en una tarjeta para cambiar la variable del gráfico:
+      </p>
+
+      <div id="ui-metricas" class="grid-metricas"></div>
+
+      <div class="chart-box">
+        <div class="chart-header">
+          <span id="ui-titulo-grafico">Historial: Temperatura (°C)</span>
+          <span style="color: var(--accent);">Tiempo real</span>
+        </div>
+        <canvas id="canvasHistorial" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const equipos = {
+      'sensor-norte': {
+        nombre: 'Sensor Ambiental Norte',
+        tipoLabel: 'Nodo Multi-sensor (Temp / Humedad / CO2)',
+        estado: 'Normal',
+        metricaActiva: 'temp',
+        metricas: {
+          temp: { label: 'Temperatura', unidad: '°C', actual: 22.4, umbralAlerta: 27, historial: [21.8, 22.0, 22.1, 22.3, 22.4] },
+          hum:  { label: 'Humedad', unidad: '%', actual: 46, umbralAlerta: 75, historial: [45, 45, 46, 46, 46] },
+          co2:  { label: 'Nivel CO2', unidad: 'ppm', actual: 480, umbralAlerta: 900, historial: [440, 455, 460, 475, 480] }
+        },
+        timestamps: ['18:10', '18:12', '18:14', '18:16', '18:18']
+      },
+      'sensor-sur': {
+        nombre: 'Sensor Calidad de Aire Sur',
+        tipoLabel: 'Nodo Monitoreo CO2',
+        estado: 'Normal',
+        metricaActiva: 'co2',
+        metricas: {
+          temp: { label: 'Temperatura', unidad: '°C', actual: 23.1, umbralAlerta: 27, historial: [22.5, 22.7, 22.9, 23.0, 23.1] },
+          co2:  { label: 'Nivel CO2', unidad: 'ppm', actual: 790, umbralAlerta: 850, historial: [680, 710, 745, 770, 790] }
+        },
+        timestamps: ['18:10', '18:12', '18:14', '18:16', '18:18']
+      },
+      'pc-01': {
+        nombre: 'PC Estación 01',
+        tipoLabel: 'Computador Fijo • Lab',
+        estado: 'Activo',
+        metricaActiva: 'cpu',
+        metricas: {
+          cpu:  { label: 'Uso CPU', unidad: '%', actual: 38, umbralAlerta: 90, historial: [20, 25, 45, 40, 38] },
+          temp: { label: 'Temp. CPU', unidad: '°C', actual: 54, umbralAlerta: 85, historial: [48, 50, 56, 55, 54] },
+          ram:  { label: 'Uso RAM', unidad: 'GB', actual: 18.4, umbralAlerta: 30, historial: [16.0, 16.5, 18.2, 18.4, 18.4] }
+        },
+        timestamps: ['18:10', '18:12', '18:14', '18:16', '18:18']
+      },
+      'pc-02': {
+        nombre: 'PC Estación 02',
+        tipoLabel: 'Computador Fijo • Lab',
+        estado: 'Reposo',
+        metricaActiva: 'cpu',
+        metricas: {
+          cpu:  { label: 'Uso CPU', unidad: '%', actual: 8, umbralAlerta: 90, historial: [10, 9, 8, 7, 8] },
+          temp: { label: 'Temp. CPU', unidad: '°C', actual: 41, umbralAlerta: 85, historial: [42, 41, 41, 41, 41] }
+        },
+        timestamps: ['18:10', '18:12', '18:14', '18:16', '18:18']
+      },
+      'imp-01': {
+        nombre: 'Impresora 3D #1 (Prusa MK4)',
+        tipoLabel: 'Fabricación FDM',
+        estado: 'Imprimiendo (72%)',
+        metricaActiva: 'hotend',
+        metricas: {
+          hotend: { label: 'Temp. Boquilla', unidad: '°C', actual: 215, umbralAlerta: 260, historial: [214, 215, 215, 216, 215] },
+          cama:   { label: 'Temp. Cama', unidad: '°C', actual: 60, umbralAlerta: 100, historial: [60, 60, 60, 60, 60] }
+        },
+        timestamps: ['18:10', '18:12', '18:14', '18:16', '18:18']
+      },
+      'imp-02': {
+        nombre: 'Impresora 3D #2 (Bambu Lab)',
+        tipoLabel: 'Fabricación CoreXY',
+        estado: 'En espera',
+        metricaActiva: 'hotend',
+        metricas: {
+          hotend: { label: 'Temp. Boquilla', unidad: '°C', actual: 28, umbralAlerta: 260, historial: [32, 30, 29, 28, 28] },
+          cama:   { label: 'Temp. Cama', unidad: '°C', actual: 25, umbralAlerta: 100, historial: [26, 26, 25, 25, 25] }
+        },
+        timestamps: ['18:10', '18:12', '18:14', '18:16', '18:18']
+      }
+    };
+
+    let equipoSeleccionadoId = null;
+    let chart = null;
+
+    function seleccionarEquipo(id) {
+      equipoSeleccionadoId = id;
+      document.querySelectorAll('.equipo').forEach(el => el.classList.remove('seleccionado'));
+      document.getElementById(id).classList.add('seleccionado');
+
+      document.getElementById('placeholder-panel').style.display = 'none';
+      document.getElementById('detalle-equipo').style.display = 'flex';
+
+      renderizarPanelDerecho();
+    }
+
+    function cambiarMetricaGrafico(claveMetrica) {
+      if (!equipoSeleccionadoId) return;
+      equipos[equipoSeleccionadoId].metricaActiva = claveMetrica;
+      renderizarPanelDerecho();
+    }
+
+    function renderizarPanelDerecho() {
+      const eq = equipos[equipoSeleccionadoId];
+      if (!eq) return;
+
+      document.getElementById('ui-tipo').innerText = eq.tipoLabel;
+      document.getElementById('ui-nombre').innerText = eq.nombre;
+      document.getElementById('ui-estado').innerText = `● ${eq.estado}`;
+
+      const contenedorMetricas = document.getElementById('ui-metricas');
+      contenedorMetricas.innerHTML = '';
+
+      Object.entries(eq.metricas).forEach(([clave, data]) => {
+        const esActiva = eq.metricaActiva === clave;
+        const enAlerta = data.actual >= data.umbralAlerta;
+        
+        const card = document.createElement('div');
+        card.className = `card-metrica ${esActiva ? 'activa' : ''}`;
+        card.onclick = () => cambiarMetricaGrafico(clave);
+        card.innerHTML = `
+          <div class="metrica-label">${data.label}</div>
+          <div class="metrica-valor" style="color: ${enAlerta ? '#ef4444' : '#f9fafb'}">
+            ${data.actual} <span style="font-size: 0.9rem; color: #9ca3af;">${data.unidad}</span>
+          </div>
+        `;
+        contenedorMetricas.appendChild(card);
+      });
+
+      const metricaObj = eq.metricas[eq.metricaActiva];
+      document.getElementById('ui-titulo-grafico').innerText = `Historial: ${metricaObj.label} (${metricaObj.unidad})`;
+
+      const ctx = document.getElementById('canvasHistorial').getContext('2d');
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: eq.timestamps,
+          datasets: [{
+            label: metricaObj.label,
+            data: metricaObj.historial,
+            borderColor: '#06b6d4',
+            backgroundColor: 'rgba(6, 182, 212, 0.15)',
+            borderWidth: 2,
+            pointRadius: 3,
+            tension: 0.35,
+            fill: true
+          }]
+        },
+        options: {
+          animation: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#9ca3af', font: { size: 10 } }, grid: { color: '#1f2937' } },
+            y: { ticks: { color: '#9ca3af', font: { size: 10 } }, grid: { color: '#374151' } }
+          }
+        }
+      });
+    }
+
+    function filtrarEquipos(tipo, btn) {
+      document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('activo'));
+      btn.classList.add('activo');
+
+      document.querySelectorAll('.equipo').forEach(el => {
+        if (tipo === 'todos' || el.dataset.tipo === tipo) {
+          el.classList.remove('oculto');
+        } else {
+          el.classList.add('oculto');
+        }
+      });
+    }
+
+    function procesarLecturaEnVivo(idEquipo, nuevasLecturas) {
+      const eq = equipos[idEquipo];
+      if (!eq) return;
+
+      const ahora = new Date();
+      const horaStr = `${ahora.getHours().toString().padStart(2,'0')}:${ahora.getMinutes().toString().padStart(2,'0')}:${ahora.getSeconds().toString().padStart(2,'0')}`;
+
+      eq.timestamps.push(horaStr);
+      if (eq.timestamps.length > 10) eq.timestamps.shift();
+
+      let hayAlerta = false;
+
+      Object.entries(nuevasLecturas).forEach(([clave, valor]) => {
+        if (eq.metricas[clave]) {
+          eq.metricas[clave].actual = valor;
+          eq.metricas[clave].historial.push(valor);
+          if (eq.metricas[clave].historial.length > 10) eq.metricas[clave].historial.shift();
+
+          if (valor >= eq.metricas[clave].umbralAlerta) hayAlerta = true;
+        }
+      });
+
+      const nodoSvg = document.getElementById(idEquipo);
+      if (hayAlerta) {
+        nodoSvg.classList.add('alerta');
+        eq.estado = '⚠️ Umbral excedido';
+      } else {
+        nodoSvg.classList.remove('alerta');
+      }
+
+      if (equipoSeleccionadoId === idEquipo) {
+        renderizarPanelDerecho();
+      }
+    }
+
+    // Seleccionar el primer sensor automáticamente al abrir
+    seleccionarEquipo('sensor-norte');
+
+    setInterval(() => {
+      const tempNorte = +(22 + Math.random() * 2.5).toFixed(1);
+      const co2Norte = Math.floor(460 + Math.random() * 80);
+      procesarLecturaEnVivo('sensor-norte', { temp: tempNorte, co2: co2Norte });
+
+      const co2Sur = Math.floor(780 + Math.random() * 110);
+      procesarLecturaEnVivo('sensor-sur', { co2: co2Sur });
+
+      const cpu01 = Math.floor(25 + Math.random() * 45);
+      procesarLecturaEnVivo('pc-01', { cpu: cpu01 });
+    }, 2500);
+  </script>
+</body>
+</html>
